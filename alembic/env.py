@@ -34,14 +34,10 @@ def run_migrations_offline() -> None:
 
 
 def run_migrations_online() -> None:
-    connect_args: dict[str, object] = {}
-    if settings.database_require_ssl and settings.sync_database_url.startswith("postgresql+"):
-        connect_args = {"sslmode": "require"}
-
     connectable = create_engine(
         settings.sync_database_url,
         poolclass=pool.NullPool,
-        connect_args=connect_args,
+        connect_args=settings.sync_connect_args,
     )
 
     with connectable.connect() as connection:

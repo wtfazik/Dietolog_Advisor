@@ -3,7 +3,7 @@ from __future__ import annotations
 from functools import lru_cache
 from pathlib import Path
 from typing import Literal
-from urllib.parse import quote, urlsplit, urlunsplit
+from urllib.parse import parse_qsl, quote, urlsplit, urlunsplit
 
 from pydantic import AliasChoices, Field, SecretStr, field_validator
 from pydantic_settings import BaseSettings, SettingsConfigDict
@@ -157,6 +157,33 @@ class Settings(BaseSettings):
         if normalized.startswith("postgresql://"):
             return normalized.replace("postgresql://", "postgresql+psycopg://", 1)
         return normalized
+
+    @property
+    def database_host(self) -> str:
+        return urlsplit(_normalize_database_url(self.database_url)).hostname or ""
+
+    @property
+    def uses_external_pooler(self) -> bool:
+        parsed = urlsplit(_normalize_database_url(self.database_url))
+        query = {key.lower(): value for key, value in parse_qsl(parsed.query)}
+        host = parsed.hostname or ""
+        return "pooler.supabase.com" in host or query.get("pgbouncer", "").lower() == "true"
+
+    @property
+    def async_connect_args(self) -> dict[str, object]:
+        connect_args: dict[str, object] = {}
+        if self.database_require_ssl and self.async_database_url.startswith("postgresql+"):
+            connect_args["ssl"] = "require"
+        if self.uses_external_pooler and self.async_database_url.startswith("postgresql+"):
+            connect_args["statement_cache_size"] = 0
+        return connect_args
+
+    @property
+    def sync_connect_args(self) -> dict[str, object]:
+        connect_args: dict[str, object] = {}
+        if self.database_require_ssl and self.sync_database_url.startswith("postgresql+"):
+            connect_args["sslmode"] = "require"
+        return connect_args
 
     def require(self, *fields: str) -> None:
         missing = []
