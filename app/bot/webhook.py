@@ -13,7 +13,6 @@ from app.bot.runner import build_dispatcher
 from app.db.health import schema_ready
 from app.db.session import SessionLocal
 from app.services.model_registry import ModelRegistryService
-from app.services.reminders import ReminderService
 
 
 logger = logging.getLogger(__name__)
@@ -23,8 +22,6 @@ logger = logging.getLogger(__name__)
 class TelegramWebhookRuntime:
     bot: Bot
     dispatcher: Dispatcher
-    reminder_service: ReminderService
-    reminder_task: asyncio.Task
     webhook_url: str
     webhook_registered: bool
     schema_ready: bool
@@ -53,8 +50,6 @@ async def start_telegram_runtime(settings) -> TelegramWebhookRuntime:
         default=DefaultBotProperties(parse_mode=ParseMode.HTML),
     )
     dispatcher = build_dispatcher()
-    reminder_service = ReminderService(settings.reminder_poll_interval_seconds)
-    reminder_task = asyncio.create_task(reminder_service.run_loop(bot))
     webhook_url = build_webhook_url(settings.app_base_url)
     webhook_registered = False
 
@@ -73,8 +68,6 @@ async def start_telegram_runtime(settings) -> TelegramWebhookRuntime:
     return TelegramWebhookRuntime(
         bot=bot,
         dispatcher=dispatcher,
-        reminder_service=reminder_service,
-        reminder_task=reminder_task,
         webhook_url=webhook_url,
         webhook_registered=webhook_registered,
         schema_ready=db_schema_ready,
@@ -82,11 +75,6 @@ async def start_telegram_runtime(settings) -> TelegramWebhookRuntime:
 
 
 async def stop_telegram_runtime(runtime: TelegramWebhookRuntime) -> None:
-    runtime.reminder_service._stopped.set()
-    runtime.reminder_task.cancel()
-    with suppress(asyncio.CancelledError):
-        await runtime.reminder_task
-
     if runtime.webhook_registered:
         with suppress(Exception):
             await runtime.bot.delete_webhook(drop_pending_updates=False)
