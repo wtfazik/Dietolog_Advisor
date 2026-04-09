@@ -15,6 +15,11 @@ async def telegram_webhook(request: Request) -> JSONResponse:
             status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
             detail="Telegram runtime is not initialized",
         )
+    if not runtime.schema_ready:
+        raise HTTPException(
+            status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
+            detail="Database schema is not ready",
+        )
 
     update = await request.json()
     await runtime.dispatcher.feed_webhook_update(runtime.bot, update)

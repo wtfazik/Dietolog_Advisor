@@ -10,6 +10,7 @@ from aiogram.client.default import DefaultBotProperties
 from aiogram.enums import ParseMode
 
 from app.bot.runner import build_dispatcher
+from app.db.health import schema_ready
 from app.db.session import SessionLocal
 from app.services.model_registry import ModelRegistryService
 from app.services.reminders import ReminderService
@@ -26,6 +27,7 @@ class TelegramWebhookRuntime:
     reminder_task: asyncio.Task
     webhook_url: str
     webhook_registered: bool
+    schema_ready: bool
 
 
 def build_webhook_url(app_base_url: str) -> str:
@@ -35,9 +37,16 @@ def build_webhook_url(app_base_url: str) -> str:
 async def start_telegram_runtime(settings) -> TelegramWebhookRuntime:
     settings.require("telegram_bot_token", "superadmin_telegram_id")
 
+    db_schema_ready = False
     async with SessionLocal() as session:
-        await ModelRegistryService(settings).seed_defaults(session)
-        await session.commit()
+        db_schema_ready = await schema_ready(session)
+        if db_schema_ready:
+            await ModelRegistryService(settings).seed_defaults(session)
+            await session.commit()
+        else:
+            logger.warning(
+                "Database schema is incomplete; webhook runtime will stay in degraded mode"
+            )
 
     bot = Bot(
         token=settings.telegram_bot_token.get_secret_value(),
@@ -68,6 +77,7 @@ async def start_telegram_runtime(settings) -> TelegramWebhookRuntime:
         reminder_task=reminder_task,
         webhook_url=webhook_url,
         webhook_registered=webhook_registered,
+        schema_ready=db_schema_ready,
     )
 
 
