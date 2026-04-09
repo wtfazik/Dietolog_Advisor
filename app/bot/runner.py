@@ -33,6 +33,8 @@ def build_dispatcher() -> Dispatcher:
 async def main() -> None:
     configure_logging()
     settings = get_settings()
+    if settings.app_env.lower() == "production":
+        raise RuntimeError("Production deployment must use FastAPI webhook mode via app.main")
     settings.require("telegram_bot_token", "superadmin_telegram_id")
 
     async with SessionLocal() as session:
