@@ -18,7 +18,7 @@ class ModelRegistryService:
         self.repository = AdminRepository()
 
     async def seed_defaults(self, session) -> None:
-        exists = await session.execute(text("select to_regclass('model_registry')"))
+        exists = await session.execute(text("select to_regclass('public.model_registry')"))
         if exists.scalar_one_or_none() is None:
             logger.warning(
                 "Skipping model registry seeding because table 'model_registry' is absent"

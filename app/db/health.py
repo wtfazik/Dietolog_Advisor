@@ -17,7 +17,7 @@ async def get_missing_required_tables(session) -> list[str]:
     missing: list[str] = []
     for table_name in REQUIRED_TABLES:
         result = await session.execute(
-            text("select to_regclass(:table_name)"), {"table_name": table_name}
+            text("select to_regclass(:table_name)"), {"table_name": f"public.{table_name}"}
         )
         if result.scalar_one_or_none() is None:
             missing.append(table_name)
