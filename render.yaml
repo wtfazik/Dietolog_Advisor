@@ -24,7 +24,7 @@ services:
         sync: false
       - key: HYPERBOLIC_API_KEY
         sync: false
-      - key: TELEGRAM_BOT_TOKEN
+      - key: BOT_TOKEN
         sync: false
       - key: SUPERADMIN_TELEGRAM_ID
         sync: false
@@ -55,7 +55,7 @@ services:
         sync: false
       - key: HYPERBOLIC_API_KEY
         sync: false
-      - key: TELEGRAM_BOT_TOKEN
+      - key: BOT_TOKEN
         sync: false
       - key: SUPERADMIN_TELEGRAM_ID
         sync: false

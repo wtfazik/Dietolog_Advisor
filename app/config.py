@@ -5,7 +5,7 @@ from pathlib import Path
 from typing import Literal
 from urllib.parse import quote, urlsplit, urlunsplit
 
-from pydantic import SecretStr, field_validator
+from pydantic import AliasChoices, Field, SecretStr, field_validator
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
 
@@ -58,7 +58,10 @@ class Settings(BaseSettings):
     database_url: str = "sqlite+aiosqlite:///./app.db"
     database_require_ssl: bool = False
 
-    telegram_bot_token: SecretStr | None = None
+    telegram_bot_token: SecretStr | None = Field(
+        default=None,
+        validation_alias=AliasChoices("TELEGRAM_BOT_TOKEN", "BOT_TOKEN"),
+    )
     superadmin_telegram_id: int | None = None
 
     openrouter_api_key: SecretStr | None = None
