@@ -10,7 +10,6 @@ from aiogram.client.default import DefaultBotProperties
 from aiogram.enums import ParseMode
 
 from app.bot.runner import build_dispatcher
-from app.db.health import get_schema_status
 from app.db.session import SessionLocal
 from app.services.model_registry import ModelRegistryService
 
@@ -24,7 +23,6 @@ class TelegramWebhookRuntime:
     dispatcher: Dispatcher
     webhook_url: str
     webhook_registered: bool
-    schema_ready: bool
 
 
 def build_webhook_url(app_base_url: str) -> str:
@@ -34,26 +32,12 @@ def build_webhook_url(app_base_url: str) -> str:
 async def start_telegram_runtime(settings) -> TelegramWebhookRuntime:
     settings.require("telegram_bot_token", "superadmin_telegram_id")
 
-    status = get_schema_status()
-    logger.info(
-        "Database schema check: database=%s schema=%s search_path=%s detected_tables=%s missing_tables=%s",
-        status.database_name,
-        status.current_schema,
-        status.search_path,
-        ", ".join(status.detected_tables),
-        ", ".join(status.missing_tables) or "none",
-    )
-
-    db_schema_ready = status.ready
     async with SessionLocal() as session:
-        if db_schema_ready:
+        try:
             await ModelRegistryService(settings).seed_defaults(session)
             await session.commit()
-        else:
-            logger.warning(
-                "Database schema is incomplete; webhook runtime will stay in degraded mode. Missing tables: %s",
-                ", ".join(status.missing_tables),
-            )
+        except Exception as e:
+            logger.warning("Could not seed defaults, database may still be initializing: %s", e)
 
     bot = Bot(
         token=settings.telegram_bot_token.get_secret_value(),
@@ -80,7 +64,6 @@ async def start_telegram_runtime(settings) -> TelegramWebhookRuntime:
         dispatcher=dispatcher,
         webhook_url=webhook_url,
         webhook_registered=webhook_registered,
-        schema_ready=db_schema_ready,
     )
 
 
