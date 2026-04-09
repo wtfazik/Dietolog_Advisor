@@ -10,7 +10,7 @@ from aiogram.client.default import DefaultBotProperties
 from aiogram.enums import ParseMode
 
 from app.bot.runner import build_dispatcher
-from app.db.health import schema_ready
+from app.db.health import get_missing_required_tables, schema_ready
 from app.db.session import SessionLocal
 from app.services.model_registry import ModelRegistryService
 
@@ -41,8 +41,10 @@ async def start_telegram_runtime(settings) -> TelegramWebhookRuntime:
             await ModelRegistryService(settings).seed_defaults(session)
             await session.commit()
         else:
+            missing_tables = await get_missing_required_tables(session)
             logger.warning(
-                "Database schema is incomplete; webhook runtime will stay in degraded mode"
+                "Database schema is incomplete; webhook runtime will stay in degraded mode. Missing tables: %s",
+                ", ".join(missing_tables),
             )
 
     bot = Bot(

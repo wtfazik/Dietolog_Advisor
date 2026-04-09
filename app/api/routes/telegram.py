@@ -1,10 +1,13 @@
 from __future__ import annotations
 
+import logging
+
 from fastapi import APIRouter, HTTPException, Request, status
 from fastapi.responses import JSONResponse
 
 
 router = APIRouter(tags=["telegram"])
+logger = logging.getLogger(__name__)
 
 
 @router.post("/telegram/webhook")
@@ -22,5 +25,8 @@ async def telegram_webhook(request: Request) -> JSONResponse:
         )
 
     update = await request.json()
-    await runtime.dispatcher.feed_webhook_update(runtime.bot, update)
+    try:
+        await runtime.dispatcher.feed_webhook_update(runtime.bot, update)
+    except Exception:
+        logger.exception("Telegram webhook update processing failed")
     return JSONResponse({"ok": True})
