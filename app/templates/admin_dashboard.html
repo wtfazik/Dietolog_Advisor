@@ -1,0 +1,147 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <title>Professional Dietologist Admin</title>
+  <style>
+    body { font-family: Arial, sans-serif; margin: 24px; background: #f4f6f8; color: #1c2733; }
+    h1, h2 { margin-bottom: 12px; }
+    section { background: #fff; padding: 16px; margin-bottom: 18px; border-radius: 10px; box-shadow: 0 1px 4px rgba(0,0,0,0.08); }
+    table { border-collapse: collapse; width: 100%; font-size: 14px; }
+    th, td { border: 1px solid #d7dde3; padding: 8px; vertical-align: top; }
+    th { background: #eef3f7; text-align: left; }
+    form { display: inline-block; margin-right: 8px; }
+    input[type="text"] { padding: 6px; width: 280px; }
+    button { padding: 6px 10px; cursor: pointer; }
+    .small { color: #6b7682; font-size: 12px; }
+  </style>
+</head>
+<body>
+  <h1>Professional Dietologist Admin</h1>
+
+  <section>
+    <h2>Pending Access Requests</h2>
+    <table>
+      <tr><th>ID</th><th>User</th><th>Telegram ID</th><th>Created</th><th>Actions</th></tr>
+      {% for item in pending_requests %}
+      <tr>
+        <td>{{ item.id }}</td>
+        <td>{{ item.user.first_name or item.user.username or item.user.telegram_user_id }}</td>
+        <td>{{ item.user.telegram_user_id }}</td>
+        <td>{{ item.created_at }}</td>
+        <td>
+          <form method="post" action="/admin/access-requests/{{ item.id }}/approve"><button type="submit">Approve</button></form>
+          <form method="post" action="/admin/access-requests/{{ item.id }}/reject"><button type="submit">Reject</button></form>
+        </td>
+      </tr>
+      {% endfor %}
+    </table>
+  </section>
+
+  <section>
+    <h2>Users</h2>
+    <table>
+      <tr><th>ID</th><th>Telegram ID</th><th>Status</th><th>Profile</th><th>Actions</th></tr>
+      {% for user in users %}
+      <tr>
+        <td>{{ user.id }}</td>
+        <td>{{ user.telegram_user_id }}</td>
+        <td>{{ user.status.value }}</td>
+        <td>
+          {% if user.profile %}
+          {{ user.profile.full_name }}<br>
+          <span class="small">{{ user.profile.goal }} | {{ user.profile.activity_level }}</span>
+          {% else %}
+          No profile
+          {% endif %}
+        </td>
+        <td>
+          <form method="post" action="/admin/users/{{ user.id }}/block">
+            <input type="text" name="reason" value="Manual admin block">
+            <button type="submit">Block</button>
+          </form>
+          <form method="post" action="/admin/users/{{ user.id }}/unblock"><button type="submit">Unblock</button></form>
+          <form method="post" action="/admin/users/{{ user.id }}/delete"><button type="submit">Soft delete</button></form>
+        </td>
+      </tr>
+      {% endfor %}
+    </table>
+  </section>
+
+  <section>
+    <h2>Meal Logs</h2>
+    <table>
+      <tr><th>ID</th><th>User</th><th>Status</th><th>Calories</th><th>Correction</th></tr>
+      {% for meal in meals %}
+      <tr>
+        <td>{{ meal.id }}</td>
+        <td>{{ meal.user.telegram_user_id if meal.user else '-' }}</td>
+        <td>{{ meal.status.value }}</td>
+        <td>{{ meal.analysis_result.estimated_calories if meal.analysis_result else '-' }}</td>
+        <td>
+          <form method="post" action="/admin/meals/{{ meal.id }}/correct">
+            <input type="text" name="corrected_summary" value="{{ meal.analysis_result.corrected_summary if meal.analysis_result else '' }}">
+            <button type="submit">Save</button>
+          </form>
+        </td>
+      </tr>
+      {% endfor %}
+    </table>
+  </section>
+
+  <section>
+    <h2>AI Logs</h2>
+    <table>
+      <tr><th>Created</th><th>Provider</th><th>Model</th><th>Route</th><th>Status</th><th>Latency</th><th>Error</th></tr>
+      {% for item in ai_logs %}
+      <tr>
+        <td>{{ item.created_at }}</td>
+        <td>{{ item.provider }}</td>
+        <td>{{ item.model_name }}</td>
+        <td>{{ item.route.value }}</td>
+        <td>{{ item.status.value }}</td>
+        <td>{{ item.latency_ms }}</td>
+        <td>{{ item.error_message or '-' }}</td>
+      </tr>
+      {% endfor %}
+    </table>
+  </section>
+
+  <section>
+    <h2>Reminder Logs</h2>
+    <table>
+      <tr><th>Created</th><th>User</th><th>Status</th><th>Message</th></tr>
+      {% for item in reminder_logs %}
+      <tr>
+        <td>{{ item.created_at }}</td>
+        <td>{{ item.user_id }}</td>
+        <td>{{ item.status }}</td>
+        <td>{{ item.message_text }}</td>
+      </tr>
+      {% endfor %}
+    </table>
+  </section>
+
+  <section>
+    <h2>Model Settings</h2>
+    <table>
+      <tr><th>Provider</th><th>Route</th><th>Model</th><th>Priority</th><th>Active</th><th>Action</th></tr>
+      {% for item in models %}
+      <tr>
+        <td>{{ item.provider }}</td>
+        <td>{{ item.route.value }}</td>
+        <td>{{ item.model_name }}</td>
+        <td>{{ item.priority }}</td>
+        <td>{{ item.is_active }}</td>
+        <td>
+          <form method="post" action="/admin/models/{{ item.id }}">
+            <input type="hidden" name="is_active" value="{{ 'false' if item.is_active else 'true' }}">
+            <button type="submit">{{ 'Disable' if item.is_active else 'Enable' }}</button>
+          </form>
+        </td>
+      </tr>
+      {% endfor %}
+    </table>
+  </section>
+</body>
+</html>
